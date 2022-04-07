@@ -16,5 +16,6 @@ type MutationRequest struct {
 	Context context.Context
 	DynaKube *dynatracev1beta1.DynaKube
 	Pod *corev1.Pod
+	InitContainer *corev1.Container
 	Namespace *corev1.Namespace
 }

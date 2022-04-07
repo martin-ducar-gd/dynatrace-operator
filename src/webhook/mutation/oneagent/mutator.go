@@ -2,11 +2,8 @@ package oneagent_mutation
 
 import (
 	"context"
-	"strings"
 
 	dynatracev1beta1 "github.com/Dynatrace/dynatrace-operator/src/api/v1beta1"
-	"github.com/Dynatrace/dynatrace-operator/src/controllers/dynakube/oneagent/daemonset"
-	"github.com/Dynatrace/dynatrace-operator/src/deploymentmetadata"
 	"github.com/Dynatrace/dynatrace-operator/src/initgeneration"
 	"github.com/Dynatrace/dynatrace-operator/src/kubeobjects"
 	dtwebhook "github.com/Dynatrace/dynatrace-operator/src/webhook"
@@ -41,8 +38,15 @@ func (mutator *OneAgentPodMutator) Enabled(pod *corev1.Pod) bool {
 	return kubeobjects.GetFieldBool(pod.Annotations, dtwebhook.AnnotationOneAgentInject, true)
 }
 
-func (mutator *OneAgentPodMutator) injected(pod *corev1.Pod) bool {
-	return kubeobjects.GetFieldBool(pod.Annotations, dtwebhook.AnnotationOneAgentInjected, true)
+// func (mutator *OneAgentPodMutator) injected(pod *corev1.Pod) bool {
+// 	return kubeobjects.GetFieldBool(pod.Annotations, dtwebhook.AnnotationOneAgentInjected, true)
+// }
+
+func (mutator *OneAgentPodMutator) getVolumeMode() string {
+	if mutator.dynakube.NeedsCSIDriver(){
+		return provisionedVolumeMode
+	}
+	return installerVolumeMode
 }
 
 func (mutator *OneAgentPodMutator) setState(request dtwebhook.MutationRequest) {
@@ -58,10 +62,12 @@ func (mutator *OneAgentPodMutator) Mutate(request dtwebhook.MutationRequest) err
 	if err := mutator.ensureInitSecret(); err != nil {
 		return err
 	}
-
 	markInjected(mutator.pod)
-
 	mutator.addVolumes()
+
+	installerInfo := getInstallerInfo(mutator.pod)
+	mutator.configureInitContainer(request.InitContainer, installerInfo)
+	mutator.updateContainers(request.InitContainer)
 
 	return nil
 }
@@ -83,36 +89,4 @@ func (mutator *OneAgentPodMutator) ensureInitSecret() error {
 	return nil
 }
 
-
-func getSecurityContext(pod *corev1.Pod) *corev1.SecurityContext {
-	var sc *corev1.SecurityContext
-	if pod.Spec.Containers[0].SecurityContext != nil {
-		sc = pod.Spec.Containers[0].SecurityContext.DeepCopy()
-	}
-	return sc
-}
-
-func getBasePodName(pod *corev1.Pod) string {
-	basePodName := pod.GenerateName
-	if basePodName == "" {
-		basePodName = pod.Name
-	}
-
-	// Only include up to the last dash character, exclusive.
-	if p := strings.LastIndex(basePodName, "-"); p != -1 {
-		basePodName = basePodName[:p]
-	}
-	return basePodName
-}
-
-
-func (mutator *OneAgentPodMutator) getDeploymentMetadata() *deploymentmetadata.DeploymentMetadata {
-	var deploymentMetadata *deploymentmetadata.DeploymentMetadata
-	if mutator.dynakube.CloudNativeFullstackMode() {
-		deploymentMetadata = deploymentmetadata.NewDeploymentMetadata(mutator.clusterID, daemonset.DeploymentTypeCloudNative)
-	} else {
-		deploymentMetadata = deploymentmetadata.NewDeploymentMetadata(mutator.clusterID, daemonset.DeploymentTypeApplicationMonitoring)
-	}
-	return deploymentMetadata
-}
 

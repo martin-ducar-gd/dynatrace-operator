@@ -5,20 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/url"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 
 	dynatracev1beta1 "github.com/Dynatrace/dynatrace-operator/src/api/v1beta1"
-	dtcsi "github.com/Dynatrace/dynatrace-operator/src/controllers/csi"
-	csivolumes "github.com/Dynatrace/dynatrace-operator/src/controllers/csi/driver/volumes"
-	appvolumes "github.com/Dynatrace/dynatrace-operator/src/controllers/csi/driver/volumes/app"
 	"github.com/Dynatrace/dynatrace-operator/src/controllers/dynakube/oneagent/daemonset"
 	"github.com/Dynatrace/dynatrace-operator/src/deploymentmetadata"
-	"github.com/Dynatrace/dynatrace-operator/src/dtclient"
-	dtingestendpoint "github.com/Dynatrace/dynatrace-operator/src/ingestendpoint"
 	"github.com/Dynatrace/dynatrace-operator/src/kubeobjects"
 	"github.com/Dynatrace/dynatrace-operator/src/kubesystem"
 	"github.com/Dynatrace/dynatrace-operator/src/mapper"
@@ -336,17 +329,23 @@ func (m *podMutator) applyReinvocationPolicy(pod *corev1.Pod, dk dynatracev1beta
 	return admission.Patched("")
 }
 
+func getSecurityContext(pod *corev1.Pod) *corev1.SecurityContext {
+	var sc *corev1.SecurityContext
+	if pod.Spec.Containers[0].SecurityContext != nil {
+		sc = pod.Spec.Containers[0].SecurityContext.DeepCopy()
+	}
+	return sc
+}
 
-func addMetadataIfMissing(c *corev1.Container, deploymentMetadata *deploymentmetadata.DeploymentMetadata) {
-	for _, v := range c.Env {
-		if v.Name == dynatraceMetadataEnvVarName {
-			return
-		}
+func getBasePodName(pod *corev1.Pod) string {
+	basePodName := pod.GenerateName
+	if basePodName == "" {
+		basePodName = pod.Name
 	}
 
-	c.Env = append(c.Env,
-		corev1.EnvVar{
-			Name:  dynatraceMetadataEnvVarName,
-			Value: deploymentMetadata.AsString(),
-		})
+	// Only include up to the last dash character, exclusive.
+	if p := strings.LastIndex(basePodName, "-"); p != -1 {
+		basePodName = basePodName[:p]
+	}
+	return basePodName
 }

@@ -10,10 +10,6 @@ var (
 
 
 const (
-	injectEvent          = "Inject"
-	updatePodEvent       = "UpdatePod"
-	missingDynakubeEvent = "MissingDynakube"
-
 	oneAgentInjectedEnvVarName   = "ONEAGENT_INJECTED"
 	dynatraceMetadataEnvVarName  = "DT_DEPLOYMENT_METADATA"
 

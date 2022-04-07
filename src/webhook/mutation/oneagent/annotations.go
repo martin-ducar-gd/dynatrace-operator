@@ -10,7 +10,6 @@ import (
 )
 
 type installerInfo struct {
-	image         string
 	flavor        string
 	technologies  string
 	installPath   string
