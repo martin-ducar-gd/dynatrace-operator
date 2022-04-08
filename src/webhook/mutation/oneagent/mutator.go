@@ -38,22 +38,17 @@ func (mutator *OneAgentPodMutator) Enabled(pod *corev1.Pod) bool {
 	return kubeobjects.GetFieldBool(pod.Annotations, dtwebhook.AnnotationOneAgentInject, true)
 }
 
-// func (mutator *OneAgentPodMutator) injected(pod *corev1.Pod) bool {
-// 	return kubeobjects.GetFieldBool(pod.Annotations, dtwebhook.AnnotationOneAgentInjected, true)
-// }
-
-func (mutator *OneAgentPodMutator) getVolumeMode() string {
-	if mutator.dynakube.NeedsCSIDriver(){
-		return provisionedVolumeMode
-	}
-	return installerVolumeMode
+func (mutator *OneAgentPodMutator) PodInjected(pod *corev1.Pod) bool {
+	return kubeobjects.GetFieldBool(pod.Annotations, dtwebhook.AnnotationOneAgentInjected, true)
 }
 
-func (mutator *OneAgentPodMutator) setState(request dtwebhook.MutationRequest) {
-	mutator.ctx = request.Context
-	mutator.dynakube = request.DynaKube
-	mutator.pod = request.Pod
-	mutator.namespace = request.Namespace
+func (mutator *OneAgentPodMutator) ContainerInjected(container *corev1.Container) bool {
+	for _, e := range container.Env {
+		if e.Name == "LD_PRELOAD" {
+			return true
+		}
+	}
+	return false
 }
 
 func (mutator *OneAgentPodMutator) Mutate(request dtwebhook.MutationRequest) error {
@@ -72,6 +67,31 @@ func (mutator *OneAgentPodMutator) Mutate(request dtwebhook.MutationRequest) err
 	return nil
 }
 
+func (mutator *OneAgentPodMutator) Reinvoke(request dtwebhook.ReinvocationRequest) {
+	currentContainer := &request.Pod.Spec.Containers[request.CurrentContainerIndex]
+	mutator.addOneAgentToContainer(currentContainer)
+	addContainerInfoInitEnv(
+		request.InitContainer,
+		request.CurrentContainerIndex + 1,
+		currentContainer.Name,
+		currentContainer.Image,
+	)
+}
+
+func (mutator *OneAgentPodMutator) getVolumeMode() string {
+	if mutator.dynakube.NeedsCSIDriver() {
+		return provisionedVolumeMode
+	}
+	return installerVolumeMode
+}
+
+func (mutator *OneAgentPodMutator) setState(request dtwebhook.MutationRequest) {
+	mutator.ctx = request.Context
+	mutator.dynakube = request.DynaKube
+	mutator.pod = request.Pod
+	mutator.namespace = request.Namespace
+}
+
 func (mutator *OneAgentPodMutator) ensureInitSecret() error {
 	var initSecret corev1.Secret
 	secretObjectKey := client.ObjectKey{Name: dtwebhook.SecretConfigName, Namespace: mutator.namespace.Name}
@@ -88,5 +108,3 @@ func (mutator *OneAgentPodMutator) ensureInitSecret() error {
 	}
 	return nil
 }
-
-
