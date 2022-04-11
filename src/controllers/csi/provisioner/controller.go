@@ -140,8 +140,8 @@ func (provisioner *OneAgentProvisioner) Reconcile(ctx context.Context, request r
 	latestProcessModuleConfig = latestProcessModuleConfig.AddHostGroup(dk.HostGroup())
 	latestProcessModuleConfigCache := newProcessModuleConfigCache(latestProcessModuleConfig)
 
-	agentUpdater := newAgentUpdater(dtc, provisioner.path, provisioner.fs, provisioner.recorder, dk)
-	if updatedVersion, err := agentUpdater.updateAgent(dynakube.LatestVersion, dynakube.TenantUUID, storedHash, latestProcessModuleConfigCache); err != nil {
+	agentUpdater := newAgentUpdater(provisioner.apiReader, dtc, provisioner.path, provisioner.fs, provisioner.recorder, dk)
+	if updatedVersion, err := agentUpdater.updateAgent(ctx, dynakube.LatestVersion, dynakube.TenantUUID, storedHash, latestProcessModuleConfigCache); err != nil {
 		log.Info("error when updating agent", "error", err.Error())
 		// reporting error but not returning it to avoid immediate requeue and subsequently calling the API every few seconds
 		return reconcile.Result{RequeueAfter: defaultRequeueDuration}, nil
