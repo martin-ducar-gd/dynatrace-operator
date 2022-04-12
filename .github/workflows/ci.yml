@@ -53,7 +53,7 @@ jobs:
         id: depdownload
         run: |
           sudo apt-get update
-          sudo apt-get install -y libdevmapper-dev libbtrfs-dev
+          sudo apt-get install -y libdevmapper-dev libbtrfs-dev libgpgme-dev
       - name: Run Unit tests
         id: unittest
         run: |
@@ -70,7 +70,7 @@ jobs:
         id: depdownload
         run: |
           sudo apt-get update
-          sudo apt-get install -y libdevmapper-dev libbtrfs-dev
+          sudo apt-get install -y libdevmapper-dev libbtrfs-dev libgpgme-dev
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v2
         with:
@@ -103,6 +103,11 @@ jobs:
           key: ${{ runner.os }}-go-build-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-build-
+      - name: Download dependencies
+        id: depdownload
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libdevmapper-dev libbtrfs-dev libgpgme-dev
       - name: Prepare
         id: prep
         run: |
