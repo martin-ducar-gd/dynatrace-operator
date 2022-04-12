@@ -103,11 +103,6 @@ jobs:
           key: ${{ runner.os }}-go-build-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-build-
-      - name: Download dependencies
-        id: depdownload
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libdevmapper-dev libbtrfs-dev libgpgme-dev
       - name: Prepare
         id: prep
         run: |
@@ -147,6 +142,11 @@ jobs:
           go get -d ./...
           ls -la $HOME/go/pkg/mod
           cp -r $HOME/go/pkg/mod .
+      - name: Download dependencies
+        id: depdownload
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libdevmapper-dev libbtrfs-dev libgpgme-dev
       - name: Build amd64
         uses: docker/build-push-action@v2
         with:
