@@ -146,7 +146,7 @@ jobs:
         id: depdownload
         run: |
           sudo apt-get update
-          sudo apt-get install -y libdevmapper-dev libbtrfs-dev libgpgme-dev
+          sudo apt-get install -y libdevmapper-dev libbtrfs-dev libgpgme-dev golang-github-proglottis-gpgme-dev
       - name: Build amd64
         uses: docker/build-push-action@v2
         with:
